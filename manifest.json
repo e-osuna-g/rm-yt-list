@@ -1,0 +1,41 @@
+{
+  "name": "Youtube list cleaner",
+  "description": "Youtube list cleaner",
+  "version": "1.0",
+  "manifest_version": 3,
+  "content_scripts": [{
+    "matches": ["https://www.youtube.com/playlist*"],
+    "css": ["content-script/main.css"],
+    "js": ["imp_script.js"],
+    "type": "module"
+  }],
+  "web_accessible_resources": [{
+    "matches": ["https://www.youtube.com/*"],
+    "resources": [
+      "content-script/main.js",
+      "util/yt.js",
+      "util/util.js",
+      "util/local.js"
+    ]
+  }],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "omnibox": {
+    "keyword": "api"
+  },
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "scripting",
+    "storage",
+    "http://youtube.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "image.png"
+    }
+  }
+}
