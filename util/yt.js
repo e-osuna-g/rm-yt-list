@@ -1,11 +1,12 @@
 import { timeStringToSeconds } from "./util.js";
 export async function getCSVAndRemoveVideos(channelsToRemove) {
-  let csv = [];
+  let videosTaken = [];
   for (const x of document.querySelectorAll("ytd-playlist-video-renderer")) {
     const channelName =
       x.children[1].children[0].children[1].children[1].children[0].children[0]
         .children[0].innerText;
-    const video = x.children[1].children[0].children[1].children[0].innerText;
+    const videoName =
+      x.children[1].children[0].children[1].children[0].innerText;
     const seconds = timeStringToSeconds(
       x.querySelector(
         "ytd-thumbnail-overlay-time-status-renderer .badge-shape-wiz__text",
@@ -15,16 +16,21 @@ export async function getCSVAndRemoveVideos(channelsToRemove) {
     const link = x.querySelector("a").href;
     const chInList = channelsToRemove.find((v) => channelName.indexOf(v) >= 0);
     if (chInList) {
-      console.log("removing video", video);
+      console.log("removing video", videoName);
       //generate csv row
-      csv.push(generateCSV(channelName, video, link, seconds));
-      //await clickAndRemove(x);
+      videosTaken.push({
+        channelName,
+        videoName: videoName,
+        link,
+        seconds,
+      });
+      //videosTaken.push(generateCSV(channelName, video, link, seconds));
+      await clickAndRemove(x);
 
-      console.log("removed", video);
+      console.log("removed", videoName);
     }
   }
-  return csv.join("\n");
-  console.log("finish");
+  return videosTaken;
 }
 function generateCSV(channelName, videoName, link, seconds) {
   return [channelName, videoName, link, seconds].join(",");

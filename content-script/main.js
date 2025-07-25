@@ -14,7 +14,11 @@ function getAllChannels() {
 
 async function addButtons() {
   for (const x of document.querySelectorAll("ytd-playlist-video-renderer")) {
+    if (x.querySelector(".borrar-video-btn")) {
+      continue;
+    }
     let btn = document.createElement("button");
+    btn.classList.add("borrar-video-btn");
     btn.innerHTML = "borrar videos de canal";
     const channelName =
       x.children[1].children[0].children[1].children[1].children[0].children[0]
@@ -50,30 +54,39 @@ async function addButtons() {
   console.log("finish");
 }
 
-let interval = setInterval(() => {
-  let channels = getAllChannels();
-  if (document.readyState == "complete" && channels.size > 1) {
-    console.log("clearing");
-    clearInterval(interval);
+const body = document.querySelector("div#contents");
+const resizeObserver = new ResizeObserver((entries) => {
+  for (const entry of entries) {
+    console.log("showme", entry);
     addButtons();
   }
-}, 1000);
+});
+resizeObserver.observe(body);
+
 async function removeAndBackup(ParaBorrar) {
 }
 
 chrome.runtime.onMessage.addListener( // this is the message listener
   async function (request, sender, sendResponse) {
-    console.log("ahahahahahah", request);
-    const csv = await getCSVAndRemoveVideos(request.channels);
-    let localVal = (await getLocal("WL_CSV")).WL_CSV;
-    console.log("localcsv", localVal);
-    if (!Array.isArray(localVal)) localVal = [];
-    localVal.push(csv);
+    const videosTaken = await getCSVAndRemoveVideos(request.channels);
+    let removed = (await getLocal("RM")).RM;
+    removed = removed || {};
+    removed.WL = removed.WL || {};
+    for (let video of videosTaken) {
+      let id = new URL(video.link).searchParams.get("v");
+      removed.WL[id] = {
+        channelName: video.channelName,
+        videoName: video.videoName,
+        link: video.link,
+        seconds: video.seconds,
+      };
+    }
 
     chrome.storage.local.set({
-      WL_CSV: localVal,
+      RM: removed,
     });
     sendResponse("borrados");
+    console.log("send response");
     return true;
   },
 );
