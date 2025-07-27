@@ -1,6 +1,6 @@
 import { getCSVAndRemoveVideos, wait } from "./../util/yt.js";
 import { timeStringToSeconds } from "./../util/util.js";
-import { getLocal } from "../util/local.js";
+import { getLocal, setLocal } from "../util/local.js";
 function getAllChannels() {
   const rt = new Set();
   for (const row of document.querySelectorAll("ytd-playlist-video-renderer")) {
@@ -33,48 +33,52 @@ async function addButtons() {
 
     const link = x.querySelector("a").href;
     btn.addEventListener("click", async (e) => {
-      let got = await chrome.storage.local.get("WL");
+      let currentList = new URL(window.location.href).searchParams.get("list");
+      let got = await chrome.storage.local.get(currentList);
 
-      if (!Array.isArray(got.WL)) got.WL = [];
-      if (got.WL.some((el) => el.channel == channelName)) {
+      if (!Array.isArray(got[currentList])) got[currentList] = [];
+      if (got[currentList].some((el) => el.channel == channelName)) {
         return;
       }
 
-      got.WL.push({
+      got[currentList].push({
         channel: channelName,
         videoName: videoName,
         seconds: seconds,
         link: link,
       });
-      chrome.storage.local.set({ WL: got.WL });
+      chrome.storage.local.set({ [currentList]: got[currentList] });
     }, { passive: true });
 
     x.children[1].children[0].children[1].appendChild(btn);
   }
+  // scroll to bottom
   console.log("finish");
 }
 
-const body = document.querySelector("div#contents");
-const resizeObserver = new ResizeObserver((entries) => {
-  for (const entry of entries) {
-    console.log("showme", entry);
-    addButtons();
+const timeout = setInterval(() => {
+  const body = document.querySelector("div#contents");
+  if (body) {
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        addButtons();
+      }
+    });
+    resizeObserver.observe(body);
+    clearInterval(timeout);
   }
-});
-resizeObserver.observe(body);
-
-async function removeAndBackup(ParaBorrar) {
-}
+}, 100);
 
 chrome.runtime.onMessage.addListener( // this is the message listener
   async function (request, sender, sendResponse) {
     const videosTaken = await getCSVAndRemoveVideos(request.channels);
+    let currentList = new URL(window.location.href).searchParams.get("list");
     let removed = (await getLocal("RM")).RM;
     removed = removed || {};
-    removed.WL = removed.WL || {};
+    removed[currentList] = removed[currentList] || {};
     for (let video of videosTaken) {
       let id = new URL(video.link).searchParams.get("v");
-      removed.WL[id] = {
+      removed[currentList][id] = {
         channelName: video.channelName,
         videoName: video.videoName,
         link: video.link,
@@ -86,7 +90,45 @@ chrome.runtime.onMessage.addListener( // this is the message listener
       RM: removed,
     });
     sendResponse("borrados");
-    console.log("send response");
     return true;
   },
 );
+
+function getPlaylistName() {
+  const try1Arr = document.querySelectorAll(
+    ".thumbnail-and-metadata-wrapper yt-dynamic-sizing-formatted-string #container.dynamic-text-container yt-formatted-string#text",
+  );
+
+  for (const el of try1Arr) {
+    if (el.innerText && el.innerText.length > 0) {
+      return el.innerText;
+    }
+  }
+
+  const try2 = document.querySelector(
+    "#page-header yt-dynamic-text-view-model h1",
+  );
+  if (try2) {
+    return try2.innerText;
+  }
+  return null;
+}
+
+async function addCurrentListInfo() {
+  const name = getPlaylistName();
+  if (!name) {
+    return;
+  }
+  let currentList = new URL(window.location.href).searchParams.get("list");
+  let listInfo = await getLocal("list-info");
+  if (listInfo["list-info"]) {
+    listInfo = listInfo["list-info"];
+  }
+  console.log("listInfo", listInfo);
+  listInfo[currentList] = {
+    id: currentList,
+    name: name,
+  };
+  setLocal("list-info", listInfo);
+}
+addCurrentListInfo();
