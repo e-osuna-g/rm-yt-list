@@ -16,16 +16,26 @@
       max-height: 250px;
       overflow: auto;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       gap: 4px;
+      flex-wrap: wrap;
+      align-content: baseline;
       & > div {
+        width: 100%;
         border: 1px solid black;
         border-radius: 10px;
         padding: 3px 5px;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: anchor-center;
         & > span.remove {
           margin-right: 5px;
           cursor: pointer;
+          width: 16px;
+          padding-top: 1px;
           & svg {
+            color: #dc3545;
             max-width: 16px;
             max-height: 16px;
           }

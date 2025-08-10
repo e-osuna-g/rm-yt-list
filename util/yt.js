@@ -34,7 +34,7 @@ function generateCSV(channelName, videoName, link, seconds) {
 }
 export async function clickAndRemove(element) {
   element.children[2].children[0].children[2].click();
-  await wait(200);
+  await wait(300);
   document.querySelector("ytd-menu-popup-renderer").children[0].children[2]
     .click();
   await wait(300);
