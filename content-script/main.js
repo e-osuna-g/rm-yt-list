@@ -1,6 +1,16 @@
 import { getCSVAndRemoveVideos, wait } from "./../util/yt.js";
 import { timeStringToSeconds } from "./../util/util.js";
 import { getLocal, setLocal } from "../util/local.js";
+const obj = {
+  channelsToDelete: [],
+  oldDeleteCount: null,
+};
+function Parar() {
+  obj.channelsToDelete = [];
+  obj.oldDeleteCount = null;
+  removeVideosObserver.disconnect();
+}
+
 function getAllChannels() {
   const rt = new Set();
   for (const row of document.querySelectorAll("ytd-playlist-video-renderer")) {
@@ -53,46 +63,86 @@ async function addButtons() {
     x.children[1].children[0].children[1].appendChild(btn);
   }
   // scroll to bottom
-  console.log("finish");
 }
+let removeVideosObserver = new ResizeObserver(async (entries, observer) => {
+  let videos = await removeVideos(obj.channelsToDelete);
+  if (
+    obj.oldDeleteCount && videos.length === 0 && obj.oldDeleteCount === 0
+  ) {
+    Parar();
+  }
+  removeVideosObserver = observer;
 
-const timeout = setInterval(() => {
+  obj.oldDeleteCount = videos.length;
+});
+
+const timeout = setInterval(function () {
   const body = document.querySelector("div#contents");
   if (body) {
-    const resizeObserver = new ResizeObserver((entries) => {
+    const addButtonsObserver = new ResizeObserver(async function (entries) {
       for (const entry of entries) {
         addButtons();
       }
     });
-    resizeObserver.observe(body);
+    addButtonsObserver.observe(body);
+
     clearInterval(timeout);
   }
 }, 100);
 
 chrome.runtime.onMessage.addListener( // this is the message listener
   async function (request, sender, sendResponse) {
-    const videosTaken = await getCSVAndRemoveVideos(request.channels);
-    let currentList = new URL(window.location.href).searchParams.get("list");
-    let removed = (await getLocal("RM")).RM;
-    removed = removed || {};
-    removed[currentList] = removed[currentList] || {};
-    for (let video of videosTaken) {
-      let id = new URL(video.link).searchParams.get("v");
-      removed[currentList][id] = {
-        channelName: video.channelName,
-        videoName: video.videoName,
-        link: video.link,
-        seconds: video.seconds,
-      };
+    console.log("request11", request);
+    if (request.message === "borrar") {
+      obj.channelsToDelete = request.channels;
+      //const videos = await removeVideos(request.channels);
+      const body = document.querySelector("div#contents");
+      removeVideosObserver.observe(body);
+      /*if (videos.length > 0) {
+      }*/
+      sendResponse("borrados");
     }
 
-    chrome.storage.local.set({
-      RM: removed,
-    });
-    sendResponse("borrados");
+    if (request.message == "get" && request.info == "currentList") {
+      let currentList = new URL(window.location.href).searchParams.get("list");
+      sendResponse(currentList);
+    }
+
+    if (request.message == "action" && request.action == "parar") {
+      Parar();
+
+      removeVideosObserver.disconnect();
+      sendResponse("parando");
+    }
     return true;
   },
 );
+
+async function removeVideos(channels) {
+  const videosTaken = await getCSVAndRemoveVideos(channels);
+
+  let currentList = new URL(window.location.href).searchParams.get("list");
+  let removed = (await getLocal("RM")).RM;
+  removed = removed || {};
+  removed[currentList] = removed[currentList] || {};
+  for (let video of videosTaken) {
+    let id = new URL(video.link).searchParams.get("v");
+    removed[currentList][id] = {
+      channelName: video.channelName,
+      videoName: video.videoName,
+      link: video.link,
+      seconds: video.seconds,
+    };
+  }
+
+  chrome.storage.local.set({
+    RM: removed,
+  });
+
+  window.scroll(0, 99999999999);
+
+  return videosTaken;
+}
 
 function getPlaylistName() {
   const try1Arr = document.querySelectorAll(
@@ -124,7 +174,7 @@ async function addCurrentListInfo() {
   if (listInfo["list-info"]) {
     listInfo = listInfo["list-info"];
   }
-  console.log("listInfo", listInfo);
+  //console.log("listInfo", listInfo);
   listInfo[currentList] = {
     id: currentList,
     name: name,

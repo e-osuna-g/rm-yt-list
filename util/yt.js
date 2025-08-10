@@ -16,7 +16,6 @@ export async function getCSVAndRemoveVideos(channelsToRemove) {
     const link = x.querySelector("a").href;
     const chInList = channelsToRemove.find((v) => channelName.indexOf(v) >= 0);
     if (chInList) {
-      console.log("removing video", videoName);
       //generate csv row
       videosTaken.push({
         channelName,
@@ -24,10 +23,8 @@ export async function getCSVAndRemoveVideos(channelsToRemove) {
         link,
         seconds,
       });
-      //videosTaken.push(generateCSV(channelName, video, link, seconds));
-      await clickAndRemove(x);
 
-      console.log("removed", videoName);
+      await clickAndRemove(x);
     }
   }
   return videosTaken;

@@ -1,4 +1,6 @@
 import { getLocal, setLocal } from "./util/local.js";
+const times =
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--!Font Awesome Free v7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/></svg>`;
 chrome.storage.local.onChanged.addListener((changes, namespace) => {
   for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
     if (key == "WL") {
@@ -9,7 +11,7 @@ chrome.storage.local.onChanged.addListener((changes, namespace) => {
         const div = document.createElement("div");
         const remove = document.createElement("span");
         div.innerHTML = el.channel;
-        remove.innerHTML = "✖️";
+        remove.innerHTML = times;
         remove.addEventListener("click", async () => {
           let wl = await getLocal("WL");
           let newWL = wl.WL.filter((wl_filter) =>
@@ -17,7 +19,8 @@ chrome.storage.local.onChanged.addListener((changes, namespace) => {
           );
           await setLocal("WL", newWL);
         });
-        div.appendChild(remove);
+        div.prepend(remove);
+        //div.appendChild(remove);
         elArray.push(div);
       }
       list.replaceChildren(...elArray);
@@ -30,6 +33,7 @@ chrome.storage.local.onChanged.addListener((changes, namespace) => {
 
 async function appendList() {
   var query = { active: true, currentWindow: true };
+
   let currentTab = (await chrome.tabs.query(query))[0];
   let currentList = new URL(currentTab.url).searchParams.get("list");
   const listElement = await chrome.storage.local.get(currentList);
@@ -39,22 +43,26 @@ async function appendList() {
     const el = listElement[currentList][index];
     const div = document.createElement("div");
     const remove = document.createElement("span");
+    remove.innerHTML = times;
+    remove.classList.add("remove");
     div.innerHTML = el.channel;
-    remove.innerHTML = "✖️";
+    //remove = ;
     remove.addEventListener("click", async () => {
       let wl = (await getLocal(currentList))[currentList];
       let newWL = wl.WL.filter((wl_filter) => wl_filter.channel !== el.channel);
-
       await setLocal([currentList], newWL);
-      //console.log("afterwards", await getLocal("WL"));
     });
-    div.appendChild(remove);
+    div.prepend(remove);
     elArray.push(div);
     list.appendChild(div);
   }
   list.replaceChildren(...elArray);
 }
-
+function cleanItem(str) {
+  return str.trim().split("\n").filter((e) => e.trim().length).map((e) =>
+    e.trim()
+  ).join(" ");
+}
 async function generateTakenLists(RM) {
   const takenList = document.querySelector("#taken_lists");
   const listInfo = (await getLocal("list-info"))["list-info"];
@@ -62,6 +70,9 @@ async function generateTakenLists(RM) {
   let elements = [];
   for (let index in RM) {
     let ix = document.createElement("button");
+    ix.setAttribute("type", "button");
+    ix.classList.add("btn", "btn-primary");
+
     const list = RM[index];
     ix.innerHTML = listInfo[index].name;
     ix.type = "button";
@@ -69,8 +80,8 @@ async function generateTakenLists(RM) {
       const anchor = document.createElement("a");
       let videosRows = [];
       for (let el in list) {
-        let channelName = list[el].channelName;
-        let videoName = list[el].videoName;
+        let channelName = cleanItem(list[el].channelName);
+        let videoName = cleanItem(list[el].videoName);
         if (channelName.indexOf(",") >= 0 || channelName.indexOf('"') >= 0) {
           channelName = '"' + channelName + '"';
         }
@@ -102,13 +113,38 @@ appendList();
 takenList();
 document.querySelector("#btn_borrar")
   .addEventListener("click", async () => {
-    const currentList = (await getLocal("currentList")).currentList;
-
+    let currentList = await chrome.runtime.sendMessage({
+      "get": "currentList",
+    });
     const listElement = (await getLocal(currentList))[currentList];
-
-    const response = await chrome.runtime.sendMessage({
+    await chrome.runtime.sendMessage({
       borrar: true,
       channels: listElement,
     });
-    console.log("response22", response);
   });
+document.querySelector("#btn_parar")
+  .addEventListener("click", async (e) => {
+    e.preventDefault();
+    chrome.runtime.sendMessage({
+      action: "parar",
+    });
+  });
+document.querySelectorAll(".tab-selector")
+  .forEach((el) =>
+    el.addEventListener("click", (e) => {
+      document.querySelectorAll(".tab-selector").forEach((el) =>
+        el.classList.remove("active")
+      );
+      el.classList.add("active");
+      const tabItems = document.querySelectorAll(".tab-item");
+      for (let item of tabItems) {
+        item.classList.remove("tab-item-active");
+        item.classList.add("tab-item-inactive");
+      }
+      const showEl = document.querySelectorAll(el.dataset.target);
+      for (let item of showEl) {
+        item.classList.remove("tab-item-inactive");
+        item.classList.add("tab-item-active");
+      }
+    })
+  );

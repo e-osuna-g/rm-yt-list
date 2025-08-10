@@ -1,7 +1,15 @@
 <html>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr"
+    crossorigin="anonymous"
+  >
+
   <style>
     body {
       min-width: 300px;
+      padding: 10px;
     }
 
     #list {
@@ -10,15 +18,64 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
-      & div {}
+      & > div {
+        border: 1px solid black;
+        border-radius: 10px;
+        padding: 3px 5px;
+        & > span.remove {
+          margin-right: 5px;
+          cursor: pointer;
+          & svg {
+            max-width: 16px;
+            max-height: 16px;
+          }
+        }
+      }
+    }
+
+    .tab-item-inactive {
+      display: none;
+    }
+    .tab-item-active {
+      display: block;
+    }
+    #taken_lists {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
     }
   </style>
   <body>
-    <h1>Por borrar</h1>
-    <div id="list"></div>
-    <button id="btn_borrar">Borrar</button>
-    <div>
+    <nav class="nav nav-pills">
+      <div class="nav-item link">
+        <a
+          class="nav-link tab-selector active"
+          href="#"
+          data-target="#por_borrar"
+        >Borrado</a>
+      </div>
+      <div class="nav-item link">
+        <a class="nav-link tab-selector" href="#" data-target="#lista"
+        >Listas</a>
+      </div>
+    </nav>
+
+    <div id="por_borrar" class="tab-item tab-item-active">
+      <h1>Por borrar</h1>
+      <div id="list"></div>
+      <div style="margin-top: 5px">
+        <button type="button" id="btn_borrar" class="btn btn-primary">
+          Borrar
+        </button>
+        <button type="button" id="btn_parar" class="btn btn-primary">
+          Parar
+        </button>
+      </div>
+    </div>
+
+    <div id="lista" class="tab-item tab-item-inactive">
       <span>VideoLists</span>
+      <span>Hacer click para descargar CSV</span>
       <div id="taken_lists"></div>
     </div>
   </body>
